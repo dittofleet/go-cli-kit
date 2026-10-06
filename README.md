@@ -42,6 +42,23 @@ jobs:
 
 It checks the tag with [check-release-tag](https://github.com/dittofleet/.github/tree/main/actions/check-release-tag) (`vX.Y.Z`, on main), runs the tests, builds `<repo>-<os>-<arch>` for each target with the tag in `main.version`, and publishes them as a release.
 
+## Starting a new CLI
+
+1. Describe it with a `clikit.App`, and call `updatecheck.MaybeCheck` after each command and `selfupdate.Run` for `update`.
+2. Add the release workflow from the "Go CLI release" template (Actions → New workflow), or copy the snippet above.
+3. Add `.github/dependabot.yml`, so new kit versions open a PR:
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: github.com/dittofleet/go-cli-kit
+```
+
 ## Working on the kit and a CLI together
 
 Point `GOWORK` at a workspace outside the repos, so other checkouts aren't affected. Replacing the kit, rather than listing it under `use`, also covers a CLI that requires a kit version that isn't tagged yet:
