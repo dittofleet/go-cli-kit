@@ -1,0 +1,65 @@
+# Builds a Go CLI for every target and publishes the binaries as a GitHub
+# release. Each CLI calls this from its own tag-triggered workflow:
+#
+#   on:
+#     push:
+#       tags: ["v*"]
+#   permissions:
+#     contents: write
+#   jobs:
+#     release:
+#       uses: dittofleet/go-cli-kit/.github/workflows/go-release.yml@main
+#
+# Assets are named "<repo>-<os>-<arch>", the names release.AssetURL,
+# install.sh and `<binary> update` all expect.
+name: Go release
+
+on:
+  workflow_call:
+    inputs:
+      targets:
+        description: Space-separated <os>-<arch> pairs, with x64 for amd64.
+        type: string
+        default: darwin-arm64 darwin-x64 linux-arm64 linux-x64
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dittofleet/.github/actions/check-release-tag@main
+
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build all targets
+        env:
+          BINARY: ${{ github.event.repository.name }}
+          TARGETS: ${{ inputs.targets }}
+        run: |
+          mkdir -p dist
+          for combo in $TARGETS; do
+            os=${combo%-*}
+            arch=${combo#*-}
+            goarch=$arch
+            [ "$arch" = "x64" ] && goarch=amd64
+            CGO_ENABLED=0 GOOS=$os GOARCH=$goarch \
+              go build -trimpath \
+                -ldflags="-s -w -X main.version=${GITHUB_REF_NAME}" \
+                -o "dist/${BINARY}-${combo}" .
+          done
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes dist/*
