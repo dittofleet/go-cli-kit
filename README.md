@@ -15,6 +15,7 @@ app := clikit.App{Name: "navi", Version: version}
 | `xdg` | `ConfigDir(name)` and `DataDir(name)`, ignoring relative `XDG_*` values |
 | `updatecheck` | `MaybeCheck(app, command)` prints a hint at most once a day when a newer release is out. Skipped after `update` and `uninstall`, for dev builds, in CI, when `<APP>_NO_UPDATE_CHECK` is set, and when stderr is not a terminal |
 | `selfupdate` | `Run(app)` installs the latest release over the running binary, and reports whether it did |
+| `uninstall` | `Run(app, yes, plan)` lists what an `uninstall` command removes, asks first (or takes `--yes`), and removes the plan's items, the update cache and then the binary, saying what was removed if a step fails |
 | `release` | Asset URLs, and the latest-tag fetch, with GitHub's rate limit explained |
 
 `clikit.Executable()` resolves the running binary through symlinks, for update and uninstall commands.
@@ -44,7 +45,7 @@ It checks the tag with [check-release-tag](https://github.com/dittofleet/.github
 
 ## Starting a new CLI
 
-1. Describe it with a `clikit.App`, and call `updatecheck.MaybeCheck` after each command and `selfupdate.Run` for `update`.
+1. Describe it with a `clikit.App`, call `updatecheck.MaybeCheck` after each command, `selfupdate.Run` for `update` and `uninstall.Run` for `uninstall`.
 2. Add the release workflow from the "Go CLI release" template (Actions → New workflow), or copy the snippet above.
 3. Add `.github/dependabot.yml`, so new kit versions open a PR:
 
