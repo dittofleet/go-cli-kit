@@ -47,7 +47,7 @@ It checks the tag with [check-release-tag](https://github.com/dittofleet/.github
 
 1. Describe it with a `clikit.App`, call `updatecheck.MaybeCheck` after each command, `selfupdate.Run` for `update` and `uninstall.Run` for `uninstall`.
 2. Add the release workflow from the "Go CLI release" template (Actions → New workflow), or copy the snippet above.
-3. Add `.github/dependabot.yml`, so new kit versions open a PR:
+3. Add `.github/dependabot.yml`, so new kit versions open a PR the next day, skipping Dependabot's default 3-day wait:
 
 ```yaml
 version: 2
@@ -58,6 +58,9 @@ updates:
       interval: daily
     allow:
       - dependency-name: github.com/dittofleet/go-cli-kit
+    cooldown:
+      exclude:
+        - github.com/dittofleet/go-cli-kit
 ```
 
 ## Working on the kit and a CLI together
