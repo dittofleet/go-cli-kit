@@ -1,5 +1,5 @@
-// Package selfupdate replaces the running binary with the app's latest
-// GitHub release.
+// Package selfupdate replaces the running binary with one of the app's
+// GitHub releases.
 package selfupdate
 
 import (
@@ -23,16 +23,11 @@ const (
 )
 
 // Run installs the latest release over the running binary, printing its
-// progress to stdout. It reports whether it installed anything, so an app
-// with a daemon knows to restart it.
+// progress to stdout, and then runs the app's AfterUpdate. It reports
+// whether it installed anything.
 func Run(app clikit.App) (updated bool, err error) {
 	if app.IsDev() {
 		return false, fmt.Errorf("cannot update a dev build. Either run from source, or install the released binary via curl-pipe.")
-	}
-
-	suffix, err := release.AssetSuffix()
-	if err != nil {
-		return false, err
 	}
 
 	fmt.Println("Checking for updates...")
@@ -50,46 +45,61 @@ func Run(app clikit.App) (updated bool, err error) {
 		return false, nil
 	}
 
-	url := release.AssetURL(app, tagName, suffix)
-	fmt.Printf("Downloading %s for %s...\n", tagName, suffix)
+	fmt.Printf("Downloading %s...\n", tagName)
+	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
+	defer cancel()
+	if err := Install(ctx, app, tagName); err != nil {
+		return false, err
+	}
+	fmt.Printf("Updated %s -> %s\n", app.Version, tagName)
+	if app.AfterUpdate != nil {
+		if err := app.AfterUpdate(); err != nil {
+			return true, fmt.Errorf("updated to %s, but: %w", tagName, err)
+		}
+	}
+	return true, nil
+}
+
+// Install puts release tag over the running binary, without printing
+// anything, and leaves running AfterUpdate to the caller.
+func Install(ctx context.Context, app clikit.App, tag string) error {
+	suffix, err := release.AssetSuffix()
+	if err != nil {
+		return err
+	}
+	url := release.AssetURL(app, tag, suffix)
 
 	currentPath, err := clikit.Executable()
 	if err != nil {
-		return false, err
+		return err
 	}
 	// A name of its own, so two overlapping updates cannot truncate each
 	// other's download, and in the binary's directory, so the swap below is
 	// a rename rather than a copy.
 	tmp, err := os.CreateTemp(filepath.Dir(currentPath), "."+app.Name+"-update-*")
 	if err != nil {
-		return false, err
+		return err
 	}
 	// Once the rename has happened there is nothing left to remove.
 	defer os.Remove(tmp.Name())
 
-	written, err := download(tmp, url)
+	written, err := download(ctx, tmp, url)
 	// Close is an argument, so it runs even when the download failed.
 	if err := cmp.Or(err, tmp.Close()); err != nil {
-		return false, err
+		return err
 	}
 	if written < minBinaryBytes {
-		return false, fmt.Errorf("downloaded file is suspiciously small (%d bytes), so the update was aborted", written)
+		return fmt.Errorf("downloaded file is suspiciously small (%d bytes), so the update was aborted", written)
 	}
 	// CreateTemp makes the file 0600.
 	if err := os.Chmod(tmp.Name(), 0o755); err != nil {
-		return false, err
+		return err
 	}
-	if err := os.Rename(tmp.Name(), currentPath); err != nil {
-		return false, err
-	}
-	fmt.Printf("Updated %s -> %s\n", app.Version, tagName)
-	return true, nil
+	return os.Rename(tmp.Name(), currentPath)
 }
 
 // download streams url into w, returning the number of bytes written.
-func download(w io.Writer, url string) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
-	defer cancel()
+func download(ctx context.Context, w io.Writer, url string) (int64, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err

@@ -1,6 +1,6 @@
 // Package clikit holds what every dittofleet CLI shares: where it keeps
 // its files, how it finds and installs its own releases, and the daily
-// hint that a newer one exists. Each CLI describes itself once with an
+// check that installs a newer one. Each CLI describes itself once with an
 // App and hands that to the subpackages, so a fix lands in all of them
 // with a version bump instead of being copied repo by repo.
 package clikit
@@ -22,6 +22,11 @@ type App struct {
 	// Version is the running build's tag, set at build time with
 	// -ldflags "-X main.version=...". A source build leaves it "dev".
 	Version string
+
+	// AfterUpdate, if set, runs once a newer release has replaced the
+	// binary, by `update` or automatically. An app with a daemon restarts
+	// it here, so the one that keeps running is the new one.
+	AfterUpdate func() error
 }
 
 // Repo returns the GitHub <owner>/<name> slug the releases are published

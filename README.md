@@ -1,6 +1,6 @@
 # go-cli-kit
 
-What every dittofleet Go CLI does the same way: where it keeps its files, how it is installed and updates itself, the daily hint that a newer release is out, and how releases get built.
+What every dittofleet Go CLI does the same way: where it keeps its files, how it is installed and updates itself, and how releases get built.
 
 Each CLI describes itself once:
 
@@ -8,14 +8,14 @@ Each CLI describes itself once:
 app := clikit.App{Name: "navi", Version: version}
 ```
 
-`Name` is both the binary and its repo under dittofleet. The app is handed to the packages:
+`Name` is both the binary and its repo under dittofleet. An app with a daemon also sets `AfterUpdate` to restart it whenever a new release is installed. The app is handed to the packages:
 
 | Package | What it does |
 |---|---|
 | `xdg` | `ConfigDir(name)` and `DataDir(name)`, ignoring relative `XDG_*` values |
-| `updatecheck` | `MaybeCheck(app, command)` prints a hint at most once a day when a newer release is out. Skipped after `update`, `postinstall` and `uninstall`, for dev builds, in CI, when `<APP>_NO_UPDATE_CHECK` is set, and when stderr is not a terminal |
+| `updatecheck` | `MaybeCheck(app, command)` checks at most once a day, after a command, and installs a newer release when one is out, falling back to a hint if that fails. Skipped after `update`, `postinstall` and `uninstall`, for dev builds, in CI, when `<APP>_NO_UPDATE_CHECK` is set, and when stderr is not a terminal |
 | `postinstall` | `Run(app, setup)` runs a CLI's first-time setup once per machine, for the [shared install script](https://github.com/dittofleet/.github/blob/main/install.sh). After that it says the CLI is already set up |
-| `selfupdate` | `Run(app)` installs the latest release over the running binary, and reports whether it did |
+| `selfupdate` | `Run(app)` installs the latest release over the running binary, for an `update` command. `Install(ctx, app, tag)` installs a given release |
 | `uninstall` | `Run(app, yes, plan)` lists what an `uninstall` command removes, asks first (or takes `--yes`), and removes the plan's items, the kit's own files and then the binary, saying what was removed if a step fails |
 | `release` | Asset URLs, and the latest-tag fetch, with GitHub's rate limit explained |
 
