@@ -30,7 +30,8 @@ var fetchLatest = release.FetchLatestTag
 // It is skipped for dev builds, in CI, when <APP>_NO_UPDATE_CHECK is set,
 // and when stderr is not a terminal, so scripts never see the hint. It is
 // also skipped after `update`, which has just talked to the release API,
-// and `uninstall`, which has just deleted the cache this would recreate.
+// `postinstall`, which runs on a just-installed latest release, and
+// `uninstall`, which has just deleted the cache this would recreate.
 func MaybeCheck(app clikit.App, command string) {
 	if !shouldCheck(app, command) || !term.IsTerminal(int(os.Stderr.Fd())) {
 		return
@@ -39,7 +40,7 @@ func MaybeCheck(app clikit.App, command string) {
 }
 
 func shouldCheck(app clikit.App, command string) bool {
-	if command == "update" || command == "uninstall" {
+	if command == "update" || command == "postinstall" || command == "uninstall" {
 		return false
 	}
 	if app.IsDev() {

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	clikit "github.com/dittofleet/go-cli-kit"
+	"github.com/dittofleet/go-cli-kit/postinstall"
 	"github.com/dittofleet/go-cli-kit/updatecheck"
 )
 
@@ -49,15 +50,16 @@ func exists(path string) bool {
 	return err == nil
 }
 
-func TestRemovesTheItemsTheCacheAndTheBinary(t *testing.T) {
+func TestRemovesTheItemsTheKitsFilesAndTheBinary(t *testing.T) {
 	binary, out := fixture(t, false, "")
 	cache := touch(t, updatecheck.CachePath(app))
+	marker := touch(t, postinstall.MarkerPath(app))
 	config := touch(t, filepath.Join(t.TempDir(), "config.json"))
 
 	if err := Run(app, true, Plan{Items: []Item{{Label: "Config", Path: config, Remove: os.Remove}}}); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{config, cache, filepath.Dir(cache), binary} {
+	for _, path := range []string{config, cache, marker, filepath.Dir(cache), binary} {
 		if exists(path) {
 			t.Errorf("%s is still there", path)
 		}
