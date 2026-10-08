@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	clikit "github.com/dittofleet/go-cli-kit"
+	"github.com/dittofleet/go-cli-kit/postinstall"
 	"github.com/dittofleet/go-cli-kit/updatecheck"
 	"golang.org/x/term"
 )
@@ -71,15 +72,19 @@ func Run(app clikit.App, yes bool, plan Plan) error {
 		return fmt.Errorf("cannot determine binary path: %w", err)
 	}
 
+	// The install marker goes first, so even an uninstall that fails
+	// partway has the next install set up again. It is never listed.
+	marker := Item{Label: "Install marker", Path: postinstall.MarkerPath(app), Remove: FileAndEmptyDir, unlisted: true}
+
 	// The binary goes last, so a failure leaves a tool to retry with. The
-	// kit's own file goes just before it. Most apps remove the directory
-	// it is in anyway, and then it needs no line of its own.
+	// cache goes just before it. Most apps remove the directory it is in
+	// anyway, and then it needs no line of its own.
 	cache := Item{Label: "Cache", Path: updatecheck.CachePath(app), Remove: FileAndEmptyDir}
 	if _, err := os.Stat(cache.Path); err != nil || within(cache.Path, plan.Items) {
 		cache.unlisted = true
 	}
 	bin := Item{Label: "Binary", Path: binary, Remove: os.Remove}
-	items := slices.Concat(plan.Items, []Item{cache, bin})
+	items := slices.Concat([]Item{marker}, plan.Items, []Item{cache, bin})
 
 	fmt.Fprintln(stdout, "This will remove:")
 	// Listed binary first, as the thing being uninstalled.
