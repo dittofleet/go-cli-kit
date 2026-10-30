@@ -53,7 +53,7 @@ It checks the tag with [check-release-tag](https://github.com/dittofleet/.github
 curl -fsSL https://raw.githubusercontent.com/dittofleet/.github/main/install.sh | sh -s <owner>/<name>
 ```
 
-3. Add the release workflow from the "Go CLI release" template (Actions → New workflow), or copy the snippet above.
+3. Add the release workflow by copying the snippet above. In dittofleet it is also the "Go CLI release" template (Actions → New workflow).
 4. Add `.github/dependabot.yml`, so new kit versions open a PR the next day, skipping Dependabot's default 3-day wait:
 
 ```yaml
