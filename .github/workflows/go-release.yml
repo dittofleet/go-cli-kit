@@ -11,8 +11,7 @@
 #       uses: dittofleet/go-cli-kit/.github/workflows/go-release.yml@main
 #
 # Assets are named "<binary>-<os>-<arch>", the names release.AssetURL,
-# install.sh and `<binary> update` all expect. The binary is named after
-# the repo unless the `binary` input says otherwise.
+# install.sh and `<binary> update` all expect.
 name: Go release
 
 on:
