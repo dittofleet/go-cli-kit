@@ -61,8 +61,9 @@ func TestOtherFailuresReportTheStatus(t *testing.T) {
 }
 
 func TestFetchLatestTagAsksForTheAppsRepo(t *testing.T) {
+	app := clikit.App{Owner: "owner", Name: "tool", RepoName: "ToolRepo"}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/repos/owner/tool/releases/latest" {
+		if r.URL.Path != "/repos/owner/ToolRepo/releases/latest" {
 			http.NotFound(w, r)
 			return
 		}
@@ -82,6 +83,16 @@ func TestFetchLatestTagAsksForTheAppsRepo(t *testing.T) {
 func TestAssetNamesMatchTheReleaseWorkflow(t *testing.T) {
 	if got, want := AssetURL(app, "v1.2.3", "darwin-arm64"),
 		"https://github.com/owner/tool/releases/download/v1.2.3/tool-darwin-arm64"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// A repo that isn't named after its binary still publishes assets named
+// after the binary.
+func TestRepoNameOnlyRenamesTheRepo(t *testing.T) {
+	app := clikit.App{Owner: "owner", Name: "tool", RepoName: "ToolRepo"}
+	if got, want := AssetURL(app, "v1.2.3", "darwin-arm64"),
+		"https://github.com/owner/ToolRepo/releases/download/v1.2.3/tool-darwin-arm64"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

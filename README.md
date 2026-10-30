@@ -8,7 +8,7 @@ Each CLI describes itself once:
 app := clikit.App{Owner: "dittofleet", Name: "navi", Version: version}
 ```
 
-`Owner` is the GitHub user or organization, and `Name` is both the binary and its repo under it. An app with a daemon also sets `AfterUpdate` to restart it whenever a new release is installed. The app is handed to the packages:
+`Owner` is the GitHub user or organization, and `Name` is both the binary and its repo under it. A CLI whose repo is named differently also sets `RepoName`. An app with a daemon also sets `AfterUpdate` to restart it whenever a new release is installed. The app is handed to the packages:
 
 | Package | What it does |
 |---|---|
@@ -40,17 +40,18 @@ jobs:
     uses: dittofleet/go-cli-kit/.github/workflows/go-release.yml@main
     # with:
     #   targets: darwin-arm64 darwin-x64 # defaults to macOS and Linux, arm64 and x64
+    #   binary: prv # defaults to the repo name
 ```
 
-It checks the tag with [check-release-tag](https://github.com/dittofleet/.github/tree/main/actions/check-release-tag) (`vX.Y.Z`, on main), runs the tests, builds `<repo>-<os>-<arch>` for each target with the tag in `main.version`, and publishes them as a release.
+It checks the tag with [check-release-tag](https://github.com/dittofleet/.github/tree/main/actions/check-release-tag) (`vX.Y.Z`, on main), runs the tests, builds `<binary>-<os>-<arch>` for each target with the tag in `main.version`, and publishes them as a release.
 
 ## Starting a new CLI
 
 1. Describe it with a `clikit.App` naming its owner, call `updatecheck.MaybeCheck` after each command, `selfupdate.Run` for `update`, `uninstall.Run` for `uninstall` and `postinstall.Run` for a hidden `postinstall`.
-2. Install it with the shared script, which takes `<owner>/<name>`, or just `<name>` for a dittofleet CLI:
+2. Install it with the shared script, which takes `<owner>/<repo>`, or just `<repo>` for a dittofleet CLI, then the binary's name if it differs from the repo's:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/dittofleet/.github/main/install.sh | sh -s <owner>/<name>
+curl -fsSL https://raw.githubusercontent.com/dittofleet/.github/main/install.sh | sh -s <owner>/<repo> [<binary>]
 ```
 
 3. Add the release workflow by copying the snippet above. In dittofleet it is also the "Go CLI release" template (Actions → New workflow).

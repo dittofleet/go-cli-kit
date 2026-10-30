@@ -17,10 +17,14 @@ type App struct {
 	Owner string
 
 	// Name is the binary's install name, and the name of its GitHub repo
-	// under Owner. It also names the release assets
+	// under Owner unless RepoName is set. It also names the release assets
 	// ("<Name>-<os>-<arch>"), the XDG directories, and the environment
 	// variables the kit reads.
 	Name string
+
+	// RepoName, if set, is the GitHub repo's name, for an app whose repo
+	// isn't named after its binary.
+	RepoName string
 
 	// Version is the running build's tag, set at build time with
 	// -ldflags "-X main.version=...". A source build leaves it "dev".
@@ -32,10 +36,12 @@ type App struct {
 	AfterUpdate func() error
 }
 
-// Repo returns the GitHub <owner>/<name> slug the releases are published
-// under. The release workflow names assets after the repo, so the two
-// cannot differ anyway.
+// Repo returns the GitHub <owner>/<repo> slug the releases are published
+// under.
 func (a App) Repo() string {
+	if a.RepoName != "" {
+		return a.Owner + "/" + a.RepoName
+	}
 	return a.Owner + "/" + a.Name
 }
 
