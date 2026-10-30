@@ -1,14 +1,14 @@
 # go-cli-kit
 
-What every dittofleet Go CLI does the same way: where it keeps its files, how it is installed and updates itself, and how releases get built.
+What a Go CLI released on GitHub needs to do the same way every time: where it keeps its files, how it is installed and updates itself, and how releases get built. The dittofleet CLIs all use it.
 
 Each CLI describes itself once:
 
 ```go
-app := clikit.App{Name: "navi", Version: version}
+app := clikit.App{Owner: "dittofleet", Name: "navi", Version: version}
 ```
 
-`Name` is both the binary and its repo under dittofleet. An app with a daemon also sets `AfterUpdate` to restart it whenever a new release is installed. The app is handed to the packages:
+`Owner` is the GitHub user or organization, and `Name` is both the binary and its repo under it. An app with a daemon also sets `AfterUpdate` to restart it whenever a new release is installed. The app is handed to the packages:
 
 | Package | What it does |
 |---|---|
@@ -46,11 +46,11 @@ It checks the tag with [check-release-tag](https://github.com/dittofleet/.github
 
 ## Starting a new CLI
 
-1. Describe it with a `clikit.App`, call `updatecheck.MaybeCheck` after each command, `selfupdate.Run` for `update`, `uninstall.Run` for `uninstall` and `postinstall.Run` for a hidden `postinstall`.
-2. Install it with the shared script:
+1. Describe it with a `clikit.App` naming its owner, call `updatecheck.MaybeCheck` after each command, `selfupdate.Run` for `update`, `uninstall.Run` for `uninstall` and `postinstall.Run` for a hidden `postinstall`.
+2. Install it with the shared script, which takes `<owner>/<name>`, or just `<name>` for a dittofleet CLI:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/dittofleet/.github/main/install.sh | sh -s <name>
+curl -fsSL https://raw.githubusercontent.com/dittofleet/.github/main/install.sh | sh -s <owner>/<name>
 ```
 
 3. Add the release workflow from the "Go CLI release" template (Actions → New workflow), or copy the snippet above.

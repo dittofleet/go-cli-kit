@@ -12,7 +12,7 @@ import (
 	clikit "github.com/dittofleet/go-cli-kit"
 )
 
-var app = clikit.App{Name: "tool", Version: "v1.0.0"}
+var app = clikit.App{Owner: "owner", Name: "tool", Version: "v1.0.0"}
 
 // A bare "HTTP 403" reads as something being broken, when the answer is to
 // run the command again later.
@@ -62,7 +62,7 @@ func TestOtherFailuresReportTheStatus(t *testing.T) {
 
 func TestFetchLatestTagAsksForTheAppsRepo(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/repos/dittofleet/tool/releases/latest" {
+		if r.URL.Path != "/repos/owner/tool/releases/latest" {
 			http.NotFound(w, r)
 			return
 		}
@@ -81,7 +81,7 @@ func TestFetchLatestTagAsksForTheAppsRepo(t *testing.T) {
 
 func TestAssetNamesMatchTheReleaseWorkflow(t *testing.T) {
 	if got, want := AssetURL(app, "v1.2.3", "darwin-arm64"),
-		"https://github.com/dittofleet/tool/releases/download/v1.2.3/tool-darwin-arm64"; got != want {
+		"https://github.com/owner/tool/releases/download/v1.2.3/tool-darwin-arm64"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

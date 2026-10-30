@@ -1,4 +1,4 @@
-// Package clikit holds what every dittofleet CLI shares: where it keeps
+// Package clikit holds what a Go CLI released on GitHub shares: where it keeps
 // its files, how it finds and installs its own releases, and the daily
 // check that installs a newer one. Each CLI describes itself once with an
 // App and hands that to the subpackages, so a fix lands in all of them
@@ -13,8 +13,11 @@ import (
 
 // App describes one CLI.
 type App struct {
+	// Owner is the GitHub user or organization the app's repo lives under.
+	Owner string
+
 	// Name is the binary's install name, and the name of its GitHub repo
-	// under dittofleet. It also names the release assets
+	// under Owner. It also names the release assets
 	// ("<Name>-<os>-<arch>"), the XDG directories, and the environment
 	// variables the kit reads.
 	Name string
@@ -33,7 +36,7 @@ type App struct {
 // under. The release workflow names assets after the repo, so the two
 // cannot differ anyway.
 func (a App) Repo() string {
-	return "dittofleet/" + a.Name
+	return a.Owner + "/" + a.Name
 }
 
 // IsDev reports whether this is a source build, which has no release to
