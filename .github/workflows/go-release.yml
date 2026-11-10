@@ -10,20 +10,25 @@
 #     release:
 #       uses: dittofleet/go-cli-kit/.github/workflows/go-release.yml@main
 #
-# Assets are named "<binary>-<os>-<arch>", the names release.AssetURL,
-# install.sh and `<binary> update` all expect.
+# Assets are named "<binary>-<os>-<arch>", with ".exe" on the end for
+# Windows, the names release.AssetURL, the install scripts and
+# `<binary> update` all expect.
 name: Go release
 
 on:
   workflow_call:
     inputs:
       targets:
-        description: Space-separated <os>-<arch> pairs, with x64 for amd64.
+        description: Space-separated <os>-<arch> pairs, with x64 for amd64. A CLI that works on Windows adds windows-x64.
         type: string
         default: darwin-arm64 darwin-x64 linux-arm64 linux-x64
       binary:
         description: The binary's name, for a repo that isn't named after it. Defaults to the repo name.
         type: string
+      windowless:
+        description: For a CLI that starts a daemon at login. Also builds <binary>w for Windows, which runs the CLI with no console window (see cmd/windowless).
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -49,6 +54,7 @@ jobs:
         env:
           BINARY: ${{ inputs.binary || github.event.repository.name }}
           TARGETS: ${{ inputs.targets }}
+          WINDOWLESS: ${{ inputs.windowless }}
         run: |
           mkdir -p dist
           for combo in $TARGETS; do
@@ -56,10 +62,19 @@ jobs:
             arch=${combo#*-}
             goarch=$arch
             [ "$arch" = "x64" ] && goarch=amd64
+            ext=
+            [ "$os" = "windows" ] && ext=.exe
             CGO_ENABLED=0 GOOS=$os GOARCH=$goarch \
               go build -trimpath \
                 -ldflags="-s -w -X main.version=${GITHUB_REF_NAME}" \
-                -o "dist/${BINARY}-${combo}" .
+                -o "dist/${BINARY}-${combo}${ext}" .
+            if [ "$os" = "windows" ] && [ "$WINDOWLESS" = "true" ]; then
+              # Built as a windowed program, which is what gets no console.
+              CGO_ENABLED=0 GOOS=$os GOARCH=$goarch \
+                go build -trimpath -ldflags="-s -w -H=windowsgui" \
+                  -o "dist/${BINARY}w-${combo}${ext}" \
+                  github.com/dittofleet/go-cli-kit/cmd/windowless
+            fi
           done
 
       - name: Publish

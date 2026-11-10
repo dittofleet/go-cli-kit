@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 
 	clikit "github.com/dittofleet/go-cli-kit"
 	"github.com/dittofleet/go-cli-kit/postinstall"
+	"github.com/dittofleet/go-cli-kit/selfupdate"
 	"github.com/dittofleet/go-cli-kit/updatecheck"
 	"golang.org/x/term"
 )
@@ -83,8 +83,15 @@ func Run(app clikit.App, yes bool, plan Plan) error {
 	if _, err := os.Stat(cache.Path); err != nil || within(cache.Path, plan.Items) {
 		cache.unlisted = true
 	}
-	bin := Item{Label: "Binary", Path: binary, Remove: os.Remove}
-	items := slices.Concat([]Item{marker}, plan.Items, []Item{cache, bin})
+	bin := Item{Label: "Binary", Path: binary, Remove: removeBinary}
+	// On Windows, updates leave the binary they replaced beside the new one.
+	old := Item{Label: "Old binaries", Path: filepath.Dir(binary), unlisted: true, Remove: func(dir string) error {
+		selfupdate.RemoveOld(app, dir)
+		return nil
+	}}
+	// And a CLI with a daemon has <name>w.exe there, from cmd/windowless.
+	windowless := Item{Label: "Windowless launcher", Path: strings.TrimSuffix(binary, ".exe") + "w.exe", Remove: os.Remove, unlisted: true}
+	items := slices.Concat([]Item{marker}, plan.Items, []Item{cache, old, windowless, bin})
 
 	fmt.Fprintln(stdout, "This will remove:")
 	// Listed binary first, as the thing being uninstalled.
@@ -141,7 +148,8 @@ func FileAndEmptyDir(path string) error {
 		return err
 	}
 	err := os.Remove(filepath.Dir(path))
-	if errors.Is(err, syscall.ENOTEMPTY) || errors.Is(err, syscall.EEXIST) {
+	// A directory that is not empty, on every system.
+	if errors.Is(err, fs.ErrExist) {
 		return nil
 	}
 	return err

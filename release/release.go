@@ -23,8 +23,8 @@ const acceptHeader = "application/vnd.github+json"
 var apiBase = "https://api.github.com"
 
 // AssetURL returns the download URL of a tagged release's binary for a
-// platform suffix (e.g., "darwin-arm64"). Assets are named
-// "<name>-<suffix>", as the release workflow builds them.
+// platform suffix (e.g., "darwin-arm64", or "windows-x64.exe"). Assets are
+// named "<name>-<suffix>", as the release workflow builds them.
 func AssetURL(app clikit.App, tag, suffix string) string {
 	return fmt.Sprintf("https://github.com/%s/releases/download/%s/%s-%s", app.Repo(), tag, app.Name, suffix)
 }
@@ -35,20 +35,23 @@ func AssetURL(app clikit.App, tag, suffix string) string {
 // It lives here beside AssetURL because the two halves of an asset's
 // filename drifting apart is the failure this package exists to prevent,
 // and it shows up as a 404 partway through an update. The same matrix is
-// spelled in install.sh and the release workflow, which cannot call this.
+// spelled in install.sh, install.ps1 and the release workflow, which cannot
+// call this.
 func AssetSuffix() (string, error) {
-	unsupported := fmt.Errorf("unsupported platform: %s/%s", runtime.GOOS, runtime.GOARCH)
-	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
-		return "", unsupported
-	}
-	arch := runtime.GOARCH
+	return assetSuffix(runtime.GOOS, runtime.GOARCH)
+}
+
+func assetSuffix(goos, arch string) (string, error) {
 	if arch == "amd64" {
 		arch = "x64"
 	}
-	if arch != "arm64" && arch != "x64" {
-		return "", unsupported
+	switch {
+	case goos == "windows" && arch == "x64":
+		return "windows-x64.exe", nil
+	case (goos == "darwin" || goos == "linux") && (arch == "arm64" || arch == "x64"):
+		return goos + "-" + arch, nil
 	}
-	return runtime.GOOS + "-" + arch, nil
+	return "", fmt.Errorf("unsupported platform: %s/%s", goos, arch)
 }
 
 // FetchLatestTag returns the tag_name of the app's latest GitHub release.
