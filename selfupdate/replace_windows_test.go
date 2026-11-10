@@ -1,7 +1,6 @@
 package selfupdate
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,34 +11,19 @@ import (
 
 var app = clikit.App{Owner: "owner", Name: "tool", Version: "v1.0.0"}
 
-// With this set, the test binary stands in for an installed CLI that is
-// running: it does nothing until its stdin closes.
-const runAsTool = "SELFUPDATE_TEST_RUN_AS_TOOL"
-
-func TestMain(m *testing.M) {
-	if os.Getenv(runAsTool) != "" {
-		io.Copy(io.Discard, os.Stdin)
-		return
-	}
-	os.Exit(m.Run())
-}
-
-// run starts a copy of the test binary at path, until the test ends.
-func run(t *testing.T, path string) {
-	t.Helper()
-	self, err := os.Executable()
+func TestReplaceWorksOnABinaryThatIsRunning(t *testing.T) {
+	dir := t.TempDir()
+	// A copy of cmd.exe stands in for the installed CLI: it runs until its
+	// stdin closes.
+	shell, err := os.ReadFile(os.Getenv("ComSpec"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, err := os.ReadFile(self)
-	if err != nil {
+	binary := filepath.Join(dir, "tool.exe")
+	if err := os.WriteFile(binary, shell, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, data, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	tool := exec.Command(path)
-	tool.Env = append(os.Environ(), runAsTool+"=1")
+	tool := exec.Command(binary)
 	stdin, err := tool.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -51,14 +35,6 @@ func run(t *testing.T, path string) {
 		stdin.Close()
 		tool.Wait()
 	})
-}
-
-// Windows refuses to overwrite a running program, which is what an update
-// is. This runs everywhere, but it is Windows that it is for.
-func TestSwapReplacesABinaryThatIsRunning(t *testing.T) {
-	dir := t.TempDir()
-	binary := filepath.Join(dir, "tool.exe")
-	run(t, binary)
 	// What an earlier update left, with nothing running it any more.
 	earlier := filepath.Join(dir, ".tool-old-1")
 	downloaded := filepath.Join(dir, ".tool-update-1")
@@ -68,7 +44,7 @@ func TestSwapReplacesABinaryThatIsRunning(t *testing.T) {
 		}
 	}
 
-	if err := swap(app, downloaded, binary); err != nil {
+	if err := replace(app, downloaded, binary); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := os.ReadFile(binary); string(got) != "v2" {
