@@ -21,12 +21,14 @@ func TestRelativeXDGValuesAreIgnored(t *testing.T) {
 }
 
 func TestAbsoluteXDGValuesAreUsed(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", "/tmp/cfg")
-	t.Setenv("XDG_DATA_HOME", "/tmp/data")
-	if got, want := ConfigDir("app"), "/tmp/cfg/app"; got != want {
+	// A temp dir, as what counts as absolute differs on Windows.
+	cfg, data := t.TempDir(), t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfg)
+	t.Setenv("XDG_DATA_HOME", data)
+	if got, want := ConfigDir("app"), filepath.Join(cfg, "app"); got != want {
 		t.Errorf("ConfigDir = %q, want %q", got, want)
 	}
-	if got, want := DataDir("app"), "/tmp/data/app"; got != want {
+	if got, want := DataDir("app"), filepath.Join(data, "app"); got != want {
 		t.Errorf("DataDir = %q, want %q", got, want)
 	}
 }

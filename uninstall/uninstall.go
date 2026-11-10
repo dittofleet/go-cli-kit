@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 
 	clikit "github.com/dittofleet/go-cli-kit"
 	"github.com/dittofleet/go-cli-kit/postinstall"
@@ -83,7 +82,7 @@ func Run(app clikit.App, yes bool, plan Plan) error {
 	if _, err := os.Stat(cache.Path); err != nil || within(cache.Path, plan.Items) {
 		cache.unlisted = true
 	}
-	bin := Item{Label: "Binary", Path: binary, Remove: os.Remove}
+	bin := Item{Label: "Binary", Path: binary, Remove: func(path string) error { return removeBinary(app, path) }}
 	items := slices.Concat([]Item{marker}, plan.Items, []Item{cache, bin})
 
 	fmt.Fprintln(stdout, "This will remove:")
@@ -141,7 +140,8 @@ func FileAndEmptyDir(path string) error {
 		return err
 	}
 	err := os.Remove(filepath.Dir(path))
-	if errors.Is(err, syscall.ENOTEMPTY) || errors.Is(err, syscall.EEXIST) {
+	// A directory that is not empty, on every system.
+	if errors.Is(err, fs.ErrExist) {
 		return nil
 	}
 	return err
