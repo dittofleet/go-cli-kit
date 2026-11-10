@@ -71,3 +71,10 @@ func Executable() (string, error) {
 	}
 	return path, nil
 }
+
+// Windowless returns where the program that runs binary with no console
+// window is installed on Windows: naviw.exe beside navi.exe. It is built
+// from cmd/windowless, for a CLI that starts a daemon at login.
+func Windowless(binary string) string {
+	return strings.TrimSuffix(binary, ".exe") + "w.exe"
+}

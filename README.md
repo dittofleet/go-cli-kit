@@ -15,7 +15,7 @@ app := clikit.App{Owner: "dittofleet", Name: "navi", Version: version}
 | `xdg` | `ConfigDir(name)` and `DataDir(name)`, ignoring relative `XDG_*` values |
 | `updatecheck` | `MaybeCheck(app, command)` checks at most once a day, after a command, and installs a newer release when one is out, falling back to a hint if that fails. Skipped after `update`, `postinstall` and `uninstall`, for dev builds, in CI, when `<APP>_NO_UPDATE_CHECK` is set, and when stderr is not a terminal |
 | `postinstall` | `Run(app, setup)` runs a CLI's first-time setup once per machine, for the [shared install script](https://github.com/dittofleet/.github/blob/main/install.sh). After that it says the CLI is already set up |
-| `selfupdate` | `Run(app)` installs the latest release over the running binary, for an `update` command. `Install(ctx, app, tag)` installs a given release |
+| `selfupdate` | `Run(app)` installs the latest release over the running binary, for an `update` command. `Install(ctx, app, tag)` installs a given release. On Windows, where a running program cannot be overwritten, the old binary is moved aside and deleted by a later update |
 | `uninstall` | `Run(app, yes, plan)` lists what an `uninstall` command removes, asks first (or takes `--yes`), and removes the plan's items, the kit's own files and then the binary, saying what was removed if a step fails |
 | `release` | Asset URLs, and the latest-tag fetch, with GitHub's rate limit explained |
 
@@ -39,11 +39,14 @@ jobs:
   release:
     uses: dittofleet/go-cli-kit/.github/workflows/go-release.yml@main
     # with:
-    #   targets: darwin-arm64 darwin-x64 # defaults to macOS and Linux, arm64 and x64
+    #   targets: darwin-arm64 darwin-x64 # defaults to macOS and Linux, arm64 and x64. Add windows-x64 for Windows
     #   binary: prv # defaults to the repo name
+    #   windowless: true # for a CLI that starts a daemon at login on Windows
 ```
 
-It checks the tag with [check-release-tag](https://github.com/dittofleet/.github/tree/main/actions/check-release-tag) (`vX.Y.Z`, on main), runs the tests, builds `<binary>-<os>-<arch>` for each target with the tag in `main.version`, and publishes them as a release.
+It checks the tag with [check-release-tag](https://github.com/dittofleet/.github/tree/main/actions/check-release-tag) (`vX.Y.Z`, on main), runs the tests, builds `<binary>-<os>-<arch>` (with `.exe` on the end for Windows) for each target with the tag in `main.version`, and publishes them as a release.
+
+Windows opens a console window for a command-line program started outside a terminal, as a daemon is at login. With `windowless: true` the release also has `<binary>w.exe`, built from [`cmd/windowless`](cmd/windowless): installed beside the CLI, it runs the CLI with the same arguments and no window, as `pythonw.exe` does for Python. The CLI has Windows start `<binary>w.exe start` at login where it would have started itself, and finds it with `clikit.Windowless`. `update` leaves it as it is.
 
 ## Starting a new CLI
 
@@ -52,6 +55,12 @@ It checks the tag with [check-release-tag](https://github.com/dittofleet/.github
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/dittofleet/.github/main/install.sh | sh -s <owner>/<repo> [<binary>]
+```
+
+   On Windows, in PowerShell, if the CLI is built for it:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/dittofleet/.github/main/install.ps1))) <owner>/<repo> [<binary>]
 ```
 
 3. Add the release workflow by copying the snippet above. In dittofleet it is also the "Go CLI release" template (Actions → New workflow).

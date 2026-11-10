@@ -87,6 +87,21 @@ func TestAssetNamesMatchTheReleaseWorkflow(t *testing.T) {
 	}
 }
 
+func TestAssetSuffixes(t *testing.T) {
+	for _, c := range []struct{ goos, arch, want string }{
+		{"darwin", "arm64", "darwin-arm64"},
+		{"linux", "amd64", "linux-x64"},
+		{"windows", "amd64", "windows-x64.exe"},
+		{"windows", "arm64", ""},
+		{"freebsd", "amd64", ""},
+	} {
+		got, err := assetSuffix(c.goos, c.arch)
+		if got != c.want || (err == nil) != (c.want != "") {
+			t.Errorf("assetSuffix(%s, %s) = %q, %v, want %q", c.goos, c.arch, got, err, c.want)
+		}
+	}
+}
+
 // A repo that isn't named after its binary still publishes assets named
 // after the binary.
 func TestRepoNameOnlyRenamesTheRepo(t *testing.T) {
